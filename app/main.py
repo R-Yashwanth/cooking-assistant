@@ -1,4 +1,4 @@
-import sys
+ï»¿import sys
 import os
 import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -10,7 +10,7 @@ from utils.history import save_message, get_history, clear_history
 LANGUAGES = {
     "English": {
         "title": "AI Cooking Assistant",
-        "subtitle": "Ask me anything about cooking — recipes, techniques, substitutions & more!",
+        "subtitle": "Ask me anything about cooking ï¿½ recipes, techniques, substitutions & more!",
         "settings": "Settings",
         "cuisine": "Cuisine",
         "diet": "Diet",
@@ -40,13 +40,13 @@ LANGUAGES = {
             "Always taste as you cook",
             "Sharp knives are safer",
             "Let meat rest before cutting",
-            "Mise en place — prep first!",
+            "Mise en place ï¿½ prep first!",
             "Salt your pasta water well",
         ]
     },
     "Telugu": {
         "title": "AI ??? ????????",
-        "subtitle": "??? ??????? ????? ?????? — ????????, ????????, ??????????????? & ???????!",
+        "subtitle": "??? ??????? ????? ?????? ï¿½ ????????, ????????, ??????????????? & ???????!",
         "settings": "???????????",
         "cuisine": "??? ????",
         "diet": "???? ?????",
@@ -82,7 +82,7 @@ LANGUAGES = {
     },
     "Hindi": {
         "title": "AI ???? ????? ?? ?????",
-        "subtitle": "???? ????? ?? ???? ??? ??? ?? ????? — ??????, ?????, ?????? ?? ???? ???!",
+        "subtitle": "???? ????? ?? ???? ??? ??? ?? ????? ï¿½ ??????, ?????, ?????? ?? ???? ???!",
         "settings": "????????",
         "cuisine": "??????",
         "diet": "????",
@@ -155,72 +155,72 @@ LANGUAGES = {
     "French": {
         "title": "Assistant Culinaire IA",
         "subtitle": "Posez-moi des questions sur la cuisine!",
-        "settings": "Paramètres",
+        "settings": "Paramï¿½tres",
         "cuisine": "Cuisine",
-        "diet": "Régime",
+        "diet": "Rï¿½gime",
         "cook_time": "Temps de cuisson",
-        "skill": "Niveau de compétence",
+        "skill": "Niveau de compï¿½tence",
         "quick_prompts": "Questions rapides",
         "new_chat": "Nouveau chat",
         "chat_title": "Chattez avec votre assistant culinaire",
         "chat_placeholder": "Posez des questions sur la cuisine...",
-        "random_recipe": "Recette aléatoire",
+        "random_recipe": "Recette alï¿½atoire",
         "surprise": "Surprenez-moi!",
         "tips": "Conseils",
         "language": "Langue",
-        "previous_chats": "Chats précédents",
-        "thinking": "Chef AI réfléchit...",
+        "previous_chats": "Chats prï¿½cï¿½dents",
+        "thinking": "Chef AI rï¿½flï¿½chit...",
         "finding": "Recherche d'une recette...",
         "you": "Vous",
         "chef": "Chef AI",
         "prompts": [
-            "Comment faire des œufs brouillés moelleux?",
-            "Donnez-moi une recette de pâtes rapide",
+            "Comment faire des ï¿½ufs brouillï¿½s moelleux?",
+            "Donnez-moi une recette de pï¿½tes rapide",
             "Que cuisiner avec du poulet et du riz?",
-            "Comment faire un gâteau au chocolat simple?",
+            "Comment faire un gï¿½teau au chocolat simple?",
             "Comment couper des oignons sans pleurer?",
         ],
         "tips_list": [
-            "Goûtez toujours en cuisinant",
-            "Les couteaux tranchants sont plus sûrs",
+            "Goï¿½tez toujours en cuisinant",
+            "Les couteaux tranchants sont plus sï¿½rs",
             "Laissez reposer la viande avant de couper",
-            "Mise en place — préparez d'abord!",
-            "Salez bien l'eau des pâtes",
+            "Mise en place ï¿½ prï¿½parez d'abord!",
+            "Salez bien l'eau des pï¿½tes",
         ]
     },
     "Spanish": {
         "title": "Asistente de Cocina IA",
-        "subtitle": "¡Pregúntame cualquier cosa sobre cocina!",
-        "settings": "Configuración",
+        "subtitle": "ï¿½Pregï¿½ntame cualquier cosa sobre cocina!",
+        "settings": "Configuraciï¿½n",
         "cuisine": "Cocina",
         "diet": "Dieta",
-        "cook_time": "Tiempo de cocción",
+        "cook_time": "Tiempo de cocciï¿½n",
         "skill": "Nivel de habilidad",
-        "quick_prompts": "Preguntas rápidas",
+        "quick_prompts": "Preguntas rï¿½pidas",
         "new_chat": "Nuevo chat",
         "chat_title": "Chatea con tu asistente de cocina",
         "chat_placeholder": "Pregunta sobre cocina...",
         "random_recipe": "Receta aleatoria",
-        "surprise": "¡Sorpréndeme!",
+        "surprise": "ï¿½Sorprï¿½ndeme!",
         "tips": "Consejos",
         "language": "Idioma",
         "previous_chats": "Chats anteriores",
-        "thinking": "Chef AI está pensando...",
+        "thinking": "Chef AI estï¿½ pensando...",
         "finding": "Buscando una receta...",
-        "you": "Tú",
+        "you": "Tï¿½",
         "chef": "Chef AI",
         "prompts": [
-            "¿Cómo hacer huevos revueltos esponjosos?",
-            "Dame una receta rápida de pasta",
-            "¿Qué puedo cocinar con pollo y arroz?",
-            "¿Cómo hacer un pastel de chocolate simple?",
-            "¿Cómo cortar cebollas sin llorar?",
+            "ï¿½Cï¿½mo hacer huevos revueltos esponjosos?",
+            "Dame una receta rï¿½pida de pasta",
+            "ï¿½Quï¿½ puedo cocinar con pollo y arroz?",
+            "ï¿½Cï¿½mo hacer un pastel de chocolate simple?",
+            "ï¿½Cï¿½mo cortar cebollas sin llorar?",
         ],
         "tips_list": [
             "Siempre prueba mientras cocinas",
-            "Los cuchillos afilados son más seguros",
+            "Los cuchillos afilados son mï¿½s seguros",
             "Deja reposar la carne antes de cortar",
-            "Mise en place — ¡prepara primero!",
+            "Mise en place ï¿½ ï¿½prepara primero!",
             "Sala bien el agua de la pasta",
         ]
     }
@@ -370,3 +370,4 @@ with col2:
     st.markdown(f"### ?? {L['tips']}")
     for tip in L["tips_list"]:
         st.markdown(f"- {tip}")
+
