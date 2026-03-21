@@ -31,6 +31,16 @@ Examples:
 - Anything else: Make a funny food-related sarcastic comparison and redirect to cooking.
 
 Always end with a nudge to ask a cooking question. Never answer non-cooking topics.
+
+LANGUAGE RULE - THIS IS MANDATORY:
+You MUST respond in the exact language specified in the User Preferences.
+If preferences say "Telugu" - respond 100% in Telugu script.
+If preferences say "Hindi" - respond 100% in Hindi script.
+If preferences say "Tamil" - respond 100% in Tamil script.
+If preferences say "French" - respond 100% in French.
+If preferences say "Spanish" - respond 100% in Spanish.
+NEVER respond in English if another language is specified.
+This rule overrides everything else.
 """
 
 def get_client():
