@@ -1,22 +1,25 @@
 import os
 from groq import Groq
 
-try:
-    import streamlit as st
-    api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-except Exception:
-    api_key = os.getenv("GROQ_API_KEY")
-
-client = Groq(api_key=api_key)
-
 SYSTEM_PROMPT = """
 You are Chef AI, a friendly and expert cooking assistant.
 Help users with recipes, techniques, substitutions, and cooking tips.
 Always be warm and encouraging. Use emojis. Format recipes clearly.
 """
 
+def get_client():
+    try:
+        import streamlit as st
+        api_key = st.secrets.get("GROQ_API_KEY")
+    except Exception:
+        api_key = None
+    if not api_key:
+        api_key = os.getenv("GROQ_API_KEY")
+    return Groq(api_key=api_key)
+
 def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
     try:
+        client = get_client()
         messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}"}]
         messages.extend(chat_history[-10:])
         messages.append({"role": "user", "content": question})
@@ -32,6 +35,7 @@ def get_cooking_response(question: str, chat_history: list, preferences: str = "
 
 def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", cook_time: str = "Any") -> str:
     try:
+        client = get_client()
         prompt = f"Suggest ONE random recipe. Cuisine: {cuisine}, Diet: {diet}, Cook Time: {cook_time}. Give name, 3-line description, key ingredients."
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
