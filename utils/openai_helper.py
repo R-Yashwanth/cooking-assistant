@@ -1,12 +1,13 @@
 import os
 from groq import Groq
-from dotenv import load_dotenv
-from pathlib import Path
 
-dotenv_path = Path(__file__).parent.parent / ".env"
-load_dotenv(dotenv_path=dotenv_path)
+try:
+    import streamlit as st
+    api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+except Exception:
+    api_key = os.getenv("GROQ_API_KEY")
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=api_key)
 
 SYSTEM_PROMPT = """
 You are Chef AI, a friendly and expert cooking assistant.
