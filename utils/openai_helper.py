@@ -1,10 +1,5 @@
 import os
-from openai import OpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from groq import Groq
 
 SYSTEM_PROMPT = """
 You are Chef AI, a friendly and expert cooking assistant. You help users with:
@@ -28,78 +23,48 @@ If the user asks ANYTHING not related to cooking, food, recipes, or ingredients,
 respond with a short sarcastic funny response and DO NOT answer their question.
 
 Examples:
-- Politics/PM/Politicians → "The only PM I know is Paneer Makhani! 🧀 Want that recipe instead?"
-- Sports → "The only sport I play is speed chopping onions! 🔪 Ask me something about food!"
-- Movies → "The only blockbuster I know is a perfectly risen soufflé! 🍮 Stick to cooking!"
-- Technology → "The only tech I trust is my pressure cooker! 🫕 Ask me a recipe!"
-- News → "Breaking news: Your biryani needs more saffron! 🍚 Ask me about food!"
-- Anything else → Make a funny food-related sarcastic comparison and redirect to cooking.
+- Politics/PM/Politicians: "The only PM I know is Paneer Makhani! Want that recipe instead?"
+- Sports: "The only sport I play is speed chopping onions! Ask me something about food!"
+- Movies: "The only blockbuster I know is a perfectly risen souffle! Stick to cooking!"
+- Technology: "The only tech I trust is my pressure cooker! Ask me a recipe!"
+- News: "Breaking news: Your biryani needs more saffron! Ask me about food!"
+- Anything else: Make a funny food-related sarcastic comparison and redirect to cooking.
 
 Always end with a nudge to ask a cooking question. Never answer non-cooking topics.
 """
 
-def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
-    """
-    Get a cooking-related response from OpenAI GPT.
-    
-    Args:
-        question: User's cooking question
-        chat_history: Previous conversation history
-        preferences: User's cuisine/diet preferences
-    
-    Returns:
-        AI response string
-    """
+def get_client():
     try:
-        messages = [
-            {
-                "role": "system",
-                "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}"
-            }
-        ]
+        import streamlit as st
+        api_key = st.secrets.get("GROQ_API_KEY")
+    except Exception:
+        api_key = None
+    if not api_key:
+        api_key = os.getenv("GROQ_API_KEY")
+    return Groq(api_key=api_key)
 
-        # Add chat history (last 10 messages to manage tokens)
+def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
+    try:
+        client = get_client()
+        messages = [{"role": "system", "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}"}]
         messages.extend(chat_history[-10:])
-
-        # Add current question
         messages.append({"role": "user", "content": question})
-
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Free tier friendly
+            model="llama-3.3-70b-versatile",
             messages=messages,
             max_tokens=1000,
-            temperature=0.7,
-            stream=False
+            temperature=0.7
         )
-
         return response.choices[0].message.content
-
     except Exception as e:
-        return f"⚠️ Sorry, I ran into an issue: {str(e)}. Please try again!"
+        return f"Sorry, I ran into an issue: {str(e)}"
 
-
-def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", cook_time: str = "Any") -> str:
-    """
-    Get a random recipe suggestion based on preferences.
-    
-    Args:
-        cuisine: Preferred cuisine type
-        diet: Dietary restriction
-        cook_time: Maximum cooking time
-    
-    Returns:
-        Recipe suggestion string
-    """
+def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", cook_time: str = "Any", language: str = "English") -> str:
     try:
-        prompt = f"""Suggest ONE random recipe that fits:
-        - Cuisine: {cuisine}
-        - Diet: {diet}
-        - Cook Time: {cook_time}
-        
-        Give just the recipe name, 3-line description, and key ingredients. Keep it short!"""
-
+        client = get_client()
+        prompt = f"Suggest ONE random recipe. Cuisine: {cuisine}, Diet: {diet}, Cook Time: {cook_time}. Give name, 3-line description, key ingredients. Respond in {language} language."
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are a creative chef who suggests exciting recipes."},
                 {"role": "user", "content": prompt}
@@ -107,8 +72,6 @@ def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", co
             max_tokens=200,
             temperature=0.9
         )
-
         return response.choices[0].message.content
-
     except Exception as e:
-        return f"⚠️ Could not fetch suggestion: {str(e)}"
+        return f"Could not fetch suggestion: {str(e)}"
