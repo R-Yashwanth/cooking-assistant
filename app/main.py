@@ -1,232 +1,96 @@
 ﻿import sys
 import os
 import streamlit as st
+import pycountry
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.openai_helper import get_cooking_response, get_recipe_suggestion
-from utils.history import save_message, get_history, clear_history
+from utils.openai_helper import (
+    get_cooking_response,
+    get_recipe_suggestion,
+    get_popular_dishes,
+    get_country_languages,
+    get_country_states,
+    batch_translate_ui,
+)
 from utils.logger import log_question
+from deep_translator import GoogleTranslator
 
-# ─── Language Config ─────────────────────────────────────────────────────────
-LANGUAGES = {
-    "English": {
-        "title": "AI Cooking Assistant",
-        "subtitle": "Ask me anything about cooking — recipes, techniques, substitutions & more!",
-        "settings": "Settings",
-        "cuisine": "Cuisine",
-        "diet": "Diet",
-        "cook_time": "Cooking Time",
-        "skill": "Skill Level",
-        "quick_prompts": "Quick Prompts",
-        "new_chat": "New Chat",
-        "chat_title": "Chat with your Cooking Assistant",
-        "chat_placeholder": "Ask me anything about cooking...",
-        "random_recipe": "Random Recipe",
-        "surprise": "Surprise Me!",
-        "tips": "Tips",
-        "language": "Language",
-        "previous_chats": "Previous Chats",
-        "thinking": "Chef AI is thinking...",
-        "finding": "Finding a recipe...",
-        "you": "You",
-        "chef": "Chef AI",
-        "prompts": [
-            "How do I make fluffy scrambled eggs?",
-            "Give me a quick pasta recipe",
-            "What can I cook with chicken and rice?",
-            "How do I bake a simple chocolate cake?",
-            "How do I chop onions without crying?",
-        ],
-        "tips_list": [
-            "Always taste as you cook",
-            "Sharp knives are safer",
-            "Let meat rest before cutting",
-            "Mise en place — prep first!",
-            "Salt your pasta water well",
-        ]
-    },
-    "Telugu": {
-        "title": "AI వంట సహాయకుడు",
-        "subtitle": "వంట గురించి ఏదైనా అడగండి!",
-        "settings": "సెట్టింగ్లు",
-        "cuisine": "వంట శైలి",
-        "diet": "ఆహార నియమం",
-        "cook_time": "వంట సమయం",
-        "skill": "నైపుణ్య స్థాయి",
-        "quick_prompts": "త్వరిత ప్రశ్నలు",
-        "new_chat": "కొత్త చాట్",
-        "chat_title": "వంట సహాయకుడితో చాట్",
-        "chat_placeholder": "వంట గురించి ఏదైనా అడగండి...",
-        "random_recipe": "యాదృచ్ఛిక రెసిపీ",
-        "surprise": "ఆశ్చర్యపరచండి!",
-        "tips": "చిట్కాలు",
-        "language": "భాష",
-        "previous_chats": "మునుపటి చాట్లు",
-        "thinking": "Chef AI ఆలోచిస్తోంది...",
-        "finding": "రెసిపీ వెతుకుతోంది...",
-        "you": "మీరు",
-        "chef": "Chef AI",
-        "prompts": [
-            "మెత్తని స్క్రాంబుల్డ్ గుడ్లు ఎలా చేయాలి?",
-            "త్వరిత పాస్తా రెసిపీ ఇవ్వండి",
-            "చికెన్ మరియు అన్నంతో ఏమి వండవచ్చు?",
-            "సాధారణ చాకొలేట్ కేక్ ఎలా చేయాలి?",
-            "ఉల్లిపాయలు కన్నీళ్లు లేకుండా ఎలా కోయాలి?",
-        ],
-        "tips_list": [
-            "వంట చేస్తున్నప్పుడు రుచి చూడండి",
-            "పదునైన కత్తులు సురక్షితమైనవి",
-            "మాంసం కోయడానికి ముందు విశ్రాంతి ఇవ్వండి",
-            "ముందే సిద్ధం చేయండి!",
-            "పాస్తా నీటిలో బాగా ఉప్పు వేయండి",
-        ]
-    },
-    "Hindi": {
-        "title": "AI खाना पकाने का सहायक",
-        "subtitle": "खाना पकाने के बारे में कुछ भी पूछें!",
-        "settings": "सेटिंग्स",
-        "cuisine": "व्यंजन",
-        "diet": "आहार",
-        "cook_time": "खाना पकाने का समय",
-        "skill": "कौशल स्तर",
-        "quick_prompts": "त्वरित प्रश्न",
-        "new_chat": "नई चैट",
-        "chat_title": "खाना पकाने के सहायक से चैट करें",
-        "chat_placeholder": "खाना पकाने के बारे में कुछ भी पूछें...",
-        "random_recipe": "यादृच्छिक रेसिपी",
-        "surprise": "मुझे आश्चर्यचकित करें!",
-        "tips": "सुझाव",
-        "language": "भाषा",
-        "previous_chats": "पिछली चैट",
-        "thinking": "Chef AI सोच रहा है...",
-        "finding": "रेसिपी ढूंढ रहा है...",
-        "you": "आप",
-        "chef": "Chef AI",
-        "prompts": [
-            "फूली हुई स्क्रैम्बल्ड एग्स कैसे बनाएं?",
-            "जल्दी पास्ता रेसिपी दें",
-            "चिकन और चावल से क्या बना सकते हैं?",
-            "साधारण चॉकलेट केक कैसे बनाएं?",
-            "प्याज बिना आंसू के कैसे काटें?",
-        ],
-        "tips_list": [
-            "खाना पकाते समय चखते रहें",
-            "तेज चाकू सुरक्षित होते हैं",
-            "काटने से पहले मांस को आराम दें",
-            "पहले से तैयारी करें!",
-            "पास्ता के पानी में अच्छे से नमक डालें",
-        ]
-    },
-    "Tamil": {
-        "title": "AI சமையல் உதவியாளர்",
-        "subtitle": "சமையலைப் பற்றி எதையும் கேளுங்கள்!",
-        "settings": "அமைப்புகள்",
-        "cuisine": "உணவு வகை",
-        "diet": "உணவு முறை",
-        "cook_time": "சமையல் நேரம்",
-        "skill": "திறன் நிலை",
-        "quick_prompts": "விரைவு கேள்விகள்",
-        "new_chat": "புதிய அரட்டை",
-        "chat_title": "சமையல் உதவியாளருடன் அரட்டை",
-        "chat_placeholder": "சமையலைப் பற்றி கேளுங்கள்...",
-        "random_recipe": "சீரற்ற சமையல்",
-        "surprise": "என்னை ஆச்சரியப்படுத்து!",
-        "tips": "குறிப்புகள்",
-        "language": "மொழி",
-        "previous_chats": "முந்தைய அரட்டைகள்",
-        "thinking": "Chef AI யோசிக்கிறது...",
-        "finding": "சமையல் தேடுகிறது...",
-        "you": "நீங்கள்",
-        "chef": "Chef AI",
-        "prompts": [
-            "பஞ்சுபோன் scrambled eggs எப்படி செய்வது?",
-            "விரைவான pasta recipe கொடுங்கள்",
-            "கோழி மற்றும் சோறு வைத்து என்ன சமைக்கலாம்?",
-            "எளிய சாக்லேட் கேக் எப்படி செய்வது?",
-            "வெங்காயம் கண்ணீர் இல்லாமல் எப்படி நறுக்குவது?",
-        ],
-        "tips_list": [
-            "சமைக்கும்போது சுவை பாருங்கள்",
-            "கூர்மையான கத்திகள் பாதுகாப்பானவை",
-            "இறைச்சியை வெட்டுவதற்கு முன் ஓய்வு கொடுங்கள்",
-            "முன்கூட்டியே தயாரிக்கவும்!",
-            "பாஸ்தா தண்ணீரில் நன்றாக உப்பு போடுங்கள்",
-        ]
-    },
-    "French": {
-        "title": "Assistant Culinaire IA",
-        "subtitle": "Posez-moi des questions sur la cuisine!",
-        "settings": "Parametres",
-        "cuisine": "Cuisine",
-        "diet": "Regime",
-        "cook_time": "Temps de cuisson",
-        "skill": "Niveau de competence",
-        "quick_prompts": "Questions rapides",
-        "new_chat": "Nouveau chat",
-        "chat_title": "Chattez avec votre assistant culinaire",
-        "chat_placeholder": "Posez des questions sur la cuisine...",
-        "random_recipe": "Recette aleatoire",
-        "surprise": "Surprenez-moi!",
-        "tips": "Conseils",
-        "language": "Langue",
-        "previous_chats": "Chats precedents",
-        "thinking": "Chef AI reflechit...",
-        "finding": "Recherche d'une recette...",
-        "you": "Vous",
-        "chef": "Chef AI",
-        "prompts": [
-            "Comment faire des oeufs brouilles moelleux?",
-            "Donnez-moi une recette de pates rapide",
-            "Que cuisiner avec du poulet et du riz?",
-            "Comment faire un gateau au chocolat simple?",
-            "Comment couper des oignons sans pleurer?",
-        ],
-        "tips_list": [
-            "Goutez toujours en cuisinant",
-            "Les couteaux tranchants sont plus surs",
-            "Laissez reposer la viande avant de couper",
-            "Mise en place - preparez d'abord!",
-            "Salez bien l'eau des pates",
-        ]
-    },
-    "Spanish": {
-        "title": "Asistente de Cocina IA",
-        "subtitle": "Preguntame cualquier cosa sobre cocina!",
-        "settings": "Configuracion",
-        "cuisine": "Cocina",
-        "diet": "Dieta",
-        "cook_time": "Tiempo de coccion",
-        "skill": "Nivel de habilidad",
-        "quick_prompts": "Preguntas rapidas",
-        "new_chat": "Nuevo chat",
-        "chat_title": "Chatea con tu asistente de cocina",
-        "chat_placeholder": "Pregunta sobre cocina...",
-        "random_recipe": "Receta aleatoria",
-        "surprise": "Sorprendeme!",
-        "tips": "Consejos",
-        "language": "Idioma",
-        "previous_chats": "Chats anteriores",
-        "thinking": "Chef AI esta pensando...",
-        "finding": "Buscando una receta...",
-        "you": "Tu",
-        "chef": "Chef AI",
-        "prompts": [
-            "Como hacer huevos revueltos esponjosos?",
-            "Dame una receta rapida de pasta",
-            "Que puedo cocinar con pollo y arroz?",
-            "Como hacer un pastel de chocolate simple?",
-            "Como cortar cebollas sin llorar?",
-        ],
-        "tips_list": [
-            "Siempre prueba mientras cocinas",
-            "Los cuchillos afilados son mas seguros",
-            "Deja reposar la carne antes de cortar",
-            "Mise en place - prepara primero!",
-            "Sala bien el agua de la pasta",
-        ]
-    }
-}
+# ─── All UI texts to translate ────────────────────────────────────────────────
+UI_TEXTS = [
+    "State / Region",
+    "Settings",
+    "Diet",
+    "Cooking Time",
+    "Skill Level",
+    "Quick Prompts",
+    "New Chat",
+    "Previous Chats",
+    "Popular Dishes",
+    "Famous dishes from",
+    "Click a dish to get its recipe!",
+    "Chat with your Cooking Assistant",
+    "Random Recipe",
+    "From",
+    "Surprise Me!",
+    "Tips",
+    "You",
+    "Chef AI is thinking...",
+    "Finding a recipe...",
+    "Ask me anything about cooking!",
+    "Ask me anything about cooking...",
+    "No Restriction",
+    "Vegetarian",
+    "Vegan",
+    "Gluten-Free",
+    "Keto",
+    "Low-Calorie",
+    "Any",
+    "Under 15 mins",
+    "Under 30 mins",
+    "Under 1 hour",
+    "More than 1 hour",
+    "Beginner",
+    "Intermediate",
+    "Advanced",
+    "Professional",
+    "Always taste as you cook",
+    "Sharp knives are safer",
+    "Let meat rest before cutting",
+    "Mise en place — prep first!",
+    "Salt your pasta water well",
+    "AI Cooking Assistant",
+    "Country",
+    "Language",
+]
 
+# ─── All Countries from pycountry ────────────────────────────────────────────
+@st.cache_data
+def get_all_countries():
+    countries = [c.name for c in sorted(pycountry.countries, key=lambda x: x.name)]
+    return ["Any"] + countries
+
+# ─── All Languages from deep_translator ──────────────────────────────────────
+@st.cache_data
+def get_all_languages():
+    try:
+        langs = GoogleTranslator.get_supported_languages(as_dict=True)
+        return {lang.title(): code for lang, code in langs.items()}
+    except Exception:
+        return {"English": "en", "Hindi": "hi", "Telugu": "te", "Tamil": "ta", "French": "fr", "Spanish": "es"}
+
+# ─── Get all translations in ONE Groq API call ────────────────────────────────
+@st.cache_data
+def get_translations(lang_code: str, language_name: str) -> dict:
+    """
+    Translate ALL UI texts in a single Groq API call.
+    Cached per language — runs only once per language ever.
+    Returns English dict if lang is English.
+    """
+    if lang_code == "en":
+        return {t: t for t in UI_TEXTS}
+    return batch_translate_ui(UI_TEXTS, language_name)
+
+# ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Cooking Assistant",
     page_icon="🍳",
@@ -271,69 +135,203 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ─── Session State ────────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = []
+if "suggested_dishes" not in st.session_state:
+    st.session_state.suggested_dishes = []
 
+ALL_COUNTRIES = get_all_countries()
+ALL_LANGUAGES = get_all_languages()
+
+# ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.title("🌐 Language")
-    selected_language = st.selectbox("", list(LANGUAGES.keys()))
-    L = LANGUAGES[selected_language]
+
+    # ── 1. Country ────────────────────────────────────────────────────────────
+    st.markdown("### 🌍 Country")
+    selected_country = st.selectbox("country", ALL_COUNTRIES, label_visibility="collapsed")
+    country_name = selected_country
+
+    # ── 2. Language ───────────────────────────────────────────────────────────
+    # When Any → show ALL languages, else AI generates for country
+    if selected_country == "Any":
+        lang_options = ALL_LANGUAGES  # All 100+ languages
+    else:
+        lang_cache_key = f"langs_{selected_country}"
+        if lang_cache_key not in st.session_state:
+            with st.spinner("Loading languages..."):
+                st.session_state[lang_cache_key] = get_country_languages(country_name)
+        country_langs = st.session_state[lang_cache_key]
+        lang_options = {}
+        for lang in country_langs:
+            code = ALL_LANGUAGES.get(lang, "en")
+            lang_options[lang] = code
+        if "English" not in lang_options:
+            lang_options["English"] = "en"
+
+    st.markdown("### 🌐 Language")
+    lang_list = list(lang_options.keys())
+    default_idx = lang_list.index("English") if "English" in lang_list else 0
+    selected_language = st.selectbox("language", lang_list, index=default_idx, label_visibility="collapsed")
+    lang_code = lang_options[selected_language]
+
+    # ── Load ALL translations in ONE call (cached) ────────────────────────────
+    with st.spinner(f"Loading {selected_language} translations..." if lang_code != "en" else ""):
+        translations = get_translations(lang_code, selected_language)
+
+    def T(text: str) -> str:
+        """Get translated text from cache."""
+        return translations.get(text, text)
+
+    # ── 3. State ──────────────────────────────────────────────────────────────
+    # When Any → hide state dropdown completely
+    if selected_country == "Any":
+        selected_state = "Any"
+    else:
+        states_cache_key = f"states_{selected_country}"
+        if states_cache_key not in st.session_state:
+            with st.spinner("Loading regions..."):
+                st.session_state[states_cache_key] = get_country_states(country_name)
+        states = st.session_state.get(states_cache_key) or ["Any"]
+
+        st.markdown(f"### 🗺️ {T('State / Region')}")
+        selected_state = st.selectbox("state", states, label_visibility="collapsed")
+
+    # ── 4. Popular Dishes ─────────────────────────────────────────────────────
+    dishes_cache_key = f"dishes_{selected_country}_{selected_state}"
+    if dishes_cache_key not in st.session_state:
+        with st.spinner("Loading popular dishes..."):
+            st.session_state[dishes_cache_key] = get_popular_dishes(country_name, selected_state)
+    popular_dishes = st.session_state.get(dishes_cache_key) or []
+
+    location_name = f"{selected_state}, {country_name}" if selected_state != "Any" else country_name
+
+    if popular_dishes:
+        st.markdown(f"### 🍽️ {T('Popular Dishes')}")
+        st.caption(f"📍 {T('Famous dishes from')} {location_name}")
+        cols = st.columns(2)
+        for idx, dish in enumerate(popular_dishes):
+            with cols[idx % 2]:
+                if st.button(dish, key=f"dish_{idx}", use_container_width=True):
+                    st.session_state["quick_prompt"] = f"Give me the complete recipe for {dish} with ingredients and step by step instructions"
+        st.caption(T("Click a dish to get its recipe!"))
 
     st.divider()
-    st.title(f"⚙️ {L['settings']}")
-    cuisine = st.selectbox(f"🌍 {L['cuisine']}", ["Any", "Indian", "Italian", "Mexican", "Chinese", "Continental", "Japanese", "Mediterranean"])
-    diet = st.selectbox(f"🥗 {L['diet']}", ["No Restriction", "Vegetarian", "Vegan", "Gluten-Free", "Keto", "Low-Calorie"])
-    cook_time = st.selectbox(f"⏱️ {L['cook_time']}", ["Any", "Under 15 mins", "Under 30 mins", "Under 1 hour", "More than 1 hour"])
-    skill = st.selectbox(f"👨‍🍳 {L['skill']}", ["Beginner", "Intermediate", "Advanced", "Professional"])
+
+    # ── 5. Settings ───────────────────────────────────────────────────────────
+    st.markdown(f"### ⚙️ {T('Settings')}")
+
+    diet = st.selectbox(
+        f"🥗 {T('Diet')}",
+        [T(x) for x in ["No Restriction", "Vegetarian", "Vegan", "Gluten-Free", "Keto", "Low-Calorie"]]
+    )
+    cook_time = st.selectbox(
+        f"⏱️ {T('Cooking Time')}",
+        [T(x) for x in ["Any", "Under 15 mins", "Under 30 mins", "Under 1 hour", "More than 1 hour"]]
+    )
+    skill = st.selectbox(
+        f"👨‍🍳 {T('Skill Level')}",
+        [T(x) for x in ["Beginner", "Intermediate", "Advanced", "Professional"]]
+    )
 
     st.divider()
-    st.markdown(f"### 💡 {L['quick_prompts']}")
-    for prompt in L["prompts"]:
-        if st.button(prompt, use_container_width=True):
-            st.session_state["quick_prompt"] = prompt
+
+    # ── 6. Quick Prompts ──────────────────────────────────────────────────────
+    st.markdown(f"### 💡 {T('Quick Prompts')}")
+
+    if popular_dishes and selected_state != "Any":
+        dynamic_prompts = [
+            f"How do I make {popular_dishes[0]}?",
+            f"Give me an authentic {popular_dishes[1]} recipe" if len(popular_dishes) > 1 else "Give me a quick recipe",
+            f"What are the key ingredients in {popular_dishes[2]}?" if len(popular_dishes) > 2 else "What spices are used?",
+            f"How do I make {popular_dishes[3]} at home?" if len(popular_dishes) > 3 else "What is a popular technique?",
+            f"What makes {selected_state} cuisine unique?",
+        ]
+    elif popular_dishes:
+        dynamic_prompts = [
+            f"How do I make {popular_dishes[0]}?",
+            f"Give me a famous {country_name} recipe",
+            f"What are the most popular {country_name} dishes?",
+            "How do I make fluffy scrambled eggs?",
+            "How do I chop onions without crying?",
+        ]
+    else:
+        dynamic_prompts = [
+            "How do I make fluffy scrambled eggs?",
+            "Give me a quick pasta recipe",
+            "What can I cook with chicken and rice?",
+            "How do I bake a simple chocolate cake?",
+            "How do I chop onions without crying?",
+        ]
+
+    # Translate prompts using Groq in one batch
+    @st.cache_data
+    def translate_prompts(prompts: tuple, lang_name: str, lcode: str) -> tuple:
+        if lcode == "en":
+            return prompts
+        from utils.openai_helper import batch_translate_ui
+        result = batch_translate_ui(list(prompts), lang_name)
+        return tuple(result.get(p, p) for p in prompts)
+
+    translated_prompts = translate_prompts(tuple(dynamic_prompts), selected_language, lang_code)
+
+    for i, (original, translated) in enumerate(zip(dynamic_prompts, translated_prompts)):
+        if st.button(translated, key=f"qp_{i}", use_container_width=True):
+            st.session_state["quick_prompt"] = original
 
     st.divider()
-    if st.button(f"➕ {L['new_chat']}", use_container_width=True):
+
+    # ── 7. New Chat + Previous Chats ──────────────────────────────────────────
+    if st.button(f"➕ {T('New Chat')}", use_container_width=True):
         st.session_state.messages = []
         st.session_state.chat_history = []
+        st.session_state.suggested_dishes = []  # Reset suggestions too
         st.rerun()
 
     if st.session_state.saved_chats:
-        st.markdown(f"### 💬 {L['previous_chats']}")
+        st.markdown(f"### 💬 {T('Previous Chats')}")
         for i, chat in enumerate(reversed(st.session_state.saved_chats)):
             if st.button(f"🗨️ {chat['title']}", use_container_width=True, key=f"chat_{i}"):
                 st.session_state.messages = chat["messages"]
                 st.session_state.chat_history = chat["history"]
                 st.rerun()
 
+# ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="main-header">
-    <h1>🍳 {L['title']}</h1>
-    <p>{L['subtitle']}</p>
+    <h1>🍳 {T('AI Cooking Assistant')}</h1>
+    <p>📍 {location_name} | {T('Ask me anything about cooking!')}</p>
 </div>
 """, unsafe_allow_html=True)
 
+# ─── Main Layout ──────────────────────────────────────────────────────────────
 col1, col2 = st.columns([3, 1])
 
 with col1:
-    st.markdown(f"### 💬 {L['chat_title']}")
+    st.markdown(f"### 💬 {T('Chat with your Cooking Assistant')}")
 
     for msg in st.session_state.messages:
         if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message-user">👤 <strong>{L["you"]}:</strong> {msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="chat-message-user">👤 <strong>{T("You")}:</strong> {msg["content"]}</div>',
+                unsafe_allow_html=True
+            )
         else:
-            st.markdown(f'<div class="chat-message-ai">🍳 <strong>{L["chef"]}:</strong><br>{msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="chat-message-ai">🍳 <strong>Chef AI:</strong><br>{msg["content"]}</div>',
+                unsafe_allow_html=True
+            )
 
     if "quick_prompt" in st.session_state:
         user_input = st.session_state.pop("quick_prompt")
     else:
         user_input = None
 
-    user_question = st.chat_input(L["chat_placeholder"])
+    user_question = st.chat_input(T("Ask me anything about cooking..."))
 
     if user_question or user_input:
         question = user_question or user_input
@@ -347,9 +345,18 @@ with col1:
             })
 
         st.session_state.messages.append({"role": "user", "content": question})
-        context = f"Cuisine: {cuisine}, Diet: {diet}, Cooking Time: {cook_time}, Skill Level: {skill}. IMPORTANT: Respond only in {selected_language} language."
 
-        with st.spinner(L["thinking"]):
+        context = (
+            f"Country: {country_name}, "
+            f"State/Region: {selected_state}, "
+            f"Diet: {diet}, "
+            f"Cooking Time: {cook_time}, "
+            f"Skill Level: {skill}. "
+            f"IMPORTANT: Respond only in {selected_language} language. "
+            f"If relevant, focus on authentic {location_name} cuisine and cooking methods."
+        )
+
+        with st.spinner(T("Chef AI is thinking...")):
             response = get_cooking_response(
                 question=question,
                 chat_history=st.session_state.chat_history,
@@ -359,16 +366,34 @@ with col1:
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.chat_history.append({"role": "user", "content": question})
         st.session_state.chat_history.append({"role": "assistant", "content": response})
-        log_question(question, response, selected_language, cuisine, diet)
+        log_question(question, response, selected_language, country_name, selected_state)
         st.rerun()
 
 with col2:
-    st.markdown(f"### 🎲 {L['random_recipe']}")
-    if st.button(f"{L['surprise']} 🎉", use_container_width=True):
-        with st.spinner(L["finding"]):
-            suggestion = get_recipe_suggestion(cuisine=cuisine, diet=diet, cook_time=cook_time, language=selected_language)
+    st.markdown(f"### 🎲 {T('Random Recipe')}")
+    st.caption(f"📍 {T('From')} {location_name}")
+    if st.button(f"🎉 {T('Surprise Me!')}", use_container_width=True):
+        with st.spinner(T("Finding a recipe...")):
+            already_suggested = ", ".join(st.session_state.suggested_dishes) if st.session_state.suggested_dishes else "none"
+            suggestion = get_recipe_suggestion(
+                cuisine=f"{country_name} - {selected_state}" if selected_state != "Any" else country_name,
+                diet=diet,
+                cook_time=cook_time,
+                language=selected_language,
+                already_suggested=already_suggested
+            )
+        # Extract dish name from response (first line) and track it
+        dish_name = suggestion.split("\n")[0].strip()
+        st.session_state.suggested_dishes.append(dish_name)
         st.info(suggestion)
+        st.caption(f"🎯 {len(st.session_state.suggested_dishes)} unique dishes suggested this session")
 
-    st.markdown(f"### 📌 {L['tips']}")
-    for tip in L["tips_list"]:
-        st.markdown(f"- {tip}")
+    st.markdown(f"### 📌 {T('Tips')}")
+    for tip in [
+        "Always taste as you cook",
+        "Sharp knives are safer",
+        "Let meat rest before cutting",
+        "Mise en place — prep first!",
+        "Salt your pasta water well",
+    ]:
+        st.markdown(f"- {T(tip)}")
