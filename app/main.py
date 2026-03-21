@@ -1,7 +1,10 @@
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
+st.write(st.secrets.get("GROQ_API_KEY", "NOT FOUND"))
+
 from utils.openai_helper import get_cooking_response, get_recipe_suggestion
 from utils.history import save_message, get_history, clear_history
 
