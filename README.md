@@ -6,7 +6,7 @@ Ask anything about cooking — recipes, techniques, substitutions & more!
 ---
 
 ## 🌐 Live Demo
-👉 [Click here to try the app]([https://your-app-url.streamlit.app](https://cooking-assistant-tprgtyk486t7cnz9evcpxu.streamlit.app/)
+👉 [Click here to try the app]https://cooking-assistant-tprgtyk486t7cnz9evcpxu.streamlit.app/)
 
 ---
 
