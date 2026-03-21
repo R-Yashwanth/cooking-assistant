@@ -1,10 +1,10 @@
 import sys
 import os
+import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.openai_helper import get_cooking_response, get_recipe_suggestion
 from utils.history import save_message, get_history, clear_history
-
 
 st.set_page_config(
     page_title="🍳 AI Cooking Assistant",
