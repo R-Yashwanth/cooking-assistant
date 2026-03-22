@@ -142,45 +142,66 @@ def batch_translate_ui(texts: list, language: str) -> dict:
 
 
 def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
-    """Send user question to Groq AI and return response.
-    Tries big model first, falls back to small model if rate limited."""
+    """Send user question to Groq AI and return response."""
     import random
     client = get_client()
     random_seed = random.randint(1, 99999)
+
+    # Extract language from preferences
+    current_language = "English"
+    for pref in preferences.split(","):
+        if "Respond only in" in pref:
+            current_language = pref.split("Respond only in")[-1].replace("language.", "").strip()
+            break
+
     messages = [
         {
             "role": "system",
-            "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}\n\nCREATIVITY SEED: {random_seed} — use this to generate a completely unique and different response every time. Never repeat patterns from previous responses."
+            "content": (
+                f"{SYSTEM_PROMPT}\n\n"
+                f"User Preferences: {preferences}\n\n"
+                f"CREATIVITY SEED: {random_seed}\n\n"
+                f"⚠️ CURRENT LANGUAGE OVERRIDE: You MUST respond in {current_language} ONLY. "
+                f"This overrides ALL previous conversation history. "
+                f"Even if previous messages were in a different language, "
+                f"YOU MUST NOW RESPOND IN {current_language.upper()} ONLY. "
+                f"Do not use any other language under any circumstances."
+            )
         }
     ]
     messages.extend(chat_history[-10:])
+    
+    # Add explicit language reminder as last system message
+    messages.append({
+        "role": "system",
+        "content": f"REMINDER: Respond to the next message in {current_language} ONLY. No other language."
+    })
+    
     messages.append({"role": "user", "content": question})
 
     off_topic_count = int(preferences.split("OFF_TOPIC_COUNT:")[-1].strip()) if "OFF_TOPIC_COUNT:" in preferences else 0
     temperature = 0.7 if off_topic_count == 0 else 0.95
 
-    # Try big model first, fall back to small model if rate limited
     models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
-    
+
     for model in models:
         try:
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=1000,
+                max_tokens=2000,  # Increased from 1000 to handle non-English scripts
                 temperature=temperature
             )
+            # Track tokens
             return response.choices[0].message.content
         except Exception as e:
             error_str = str(e)
             if "rate_limit_exceeded" in error_str or "429" in error_str:
-                # Rate limited — try next model
-                print(f"Rate limit hit on {model}, trying next model...")
+                print(f"Rate limit hit on {model}, trying next...")
                 continue
             else:
-                # Different error — return error message
                 return f"Sorry, I ran into an issue: {error_str}"
-    
+
     return "Sorry, all models are currently rate limited. Please try again in a few minutes!"
 
 
