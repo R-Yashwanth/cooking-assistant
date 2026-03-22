@@ -169,7 +169,7 @@ def get_cooking_response(question: str, chat_history: list, preferences: str = "
             )
         }
     ]
-    messages.extend(chat_history[-10:])
+    messages.extend(chat_history[-6:])
     
     # Add explicit language reminder as last system message
     messages.append({
@@ -189,7 +189,7 @@ def get_cooking_response(question: str, chat_history: list, preferences: str = "
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=2000,  # Increased from 1000 to handle non-English scripts
+                max_tokens=3000,  # Increased from 1000 to handle non-English scripts
                 temperature=temperature
             )
             # Track tokens
