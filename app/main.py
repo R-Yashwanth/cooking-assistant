@@ -382,7 +382,6 @@ with col2:
                 language=selected_language,
                 already_suggested=already_suggested
             )
-        # Extract dish name from response (first line) and track it
         dish_name = suggestion.split("\n")[0].strip()
         st.session_state.suggested_dishes.append(dish_name)
         st.info(suggestion)

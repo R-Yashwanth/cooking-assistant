@@ -78,8 +78,8 @@ def get_client():
 def batch_translate_ui(texts: list, language: str) -> dict:
     """
     Translate ALL UI texts in a SINGLE Groq API call.
-    Returns a dict mapping original English text to translated text.
-    This is the fastest possible approach — one call for everything.
+    Uses small fast model to save tokens.
+    Returns dict mapping English text to translated text.
     """
     try:
         client = get_client()
@@ -92,7 +92,7 @@ def batch_translate_ui(texts: list, language: str) -> dict:
             f"{numbered}"
         )
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
@@ -104,14 +104,12 @@ def batch_translate_ui(texts: list, language: str) -> dict:
             temperature=0.1
         )
         result_text = response.choices[0].message.content.strip()
-        # Clean up markdown code blocks if present
         if result_text.startswith("```"):
             result_text = result_text.split("```")[1]
             if result_text.startswith("json"):
                 result_text = result_text[4:]
         result_text = result_text.strip()
         translations = json.loads(result_text)
-        # Fill in any missing keys with originals
         for text in texts:
             if text not in translations:
                 translations[text] = text
@@ -122,7 +120,7 @@ def batch_translate_ui(texts: list, language: str) -> dict:
 
 
 def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
-    """Send user question to Groq AI and return response."""
+    """Send user question to Groq AI and return response. Uses big model for best quality."""
     try:
         client = get_client()
         messages = [
@@ -164,7 +162,7 @@ def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", co
             f"Respond in {language} language."
         )
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "You are a creative adventurous chef. Every suggestion must be unique. NEVER repeat a dish that was already suggested. Be bold and surprising."},
                 {"role": "user", "content": prompt}
@@ -179,25 +177,31 @@ def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", co
 
 def get_popular_dishes(country: str, state: str) -> list:
     """Get 5 popular dishes from a country/state using AI."""
+    # If no country selected, return global popular dishes without API call
+    if country == "Any":
+        return ["Biryani", "Pizza", "Sushi", "Tacos", "Pad Thai"]
     try:
         client = get_client()
         location = f"{state}, {country}" if state != "Any" else country
         prompt = (
-            f"List exactly 5 most famous and popular traditional dishes from {location}. "
-            f"Return ONLY a comma-separated list of dish names, nothing else. "
-            f"No numbering, no descriptions, just dish names separated by commas."
+            f"List exactly 5 famous traditional dishes from {location}. "
+            f"Rules: Return ONLY dish names. No sentences. No explanations. "
+            f"No 'Here are' or 'I assume' or any other text. "
+            f"Just 5 dish names separated by commas. Nothing else. "
+            f"Example format: Biryani, Dosa, Idli, Vada, Sambar"
         )
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "You are a food expert. Return only comma-separated dish names, nothing else."},
+                {"role": "system", "content": "You are a food expert. Return ONLY comma-separated dish names. No sentences, no explanations, no extra text. Just dish names separated by commas."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=150,
-            temperature=0.3
+            max_tokens=60,
+            temperature=0.1
         )
         dishes_text = response.choices[0].message.content.strip()
-        dishes = [d.strip() for d in dishes_text.split(",") if d.strip()]
+        # Clean up any accidental sentences — only keep short items
+        dishes = [d.strip() for d in dishes_text.split(",") if d.strip() and len(d.strip()) < 40]
         return dishes[:5]
     except Exception as e:
         print(f"get_popular_dishes error: {e}")
@@ -215,7 +219,7 @@ def get_country_languages(country: str) -> list:
             f"Maximum 10 languages. No numbering, no extra text."
         )
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "You are a linguistics expert. List ALL official and major languages. Return only comma-separated names in English."},
                 {"role": "user", "content": prompt}
@@ -238,7 +242,6 @@ def get_country_states(country: str) -> list:
     Get states/regions using pycountry subdivisions first.
     Falls back to AI if pycountry has no data.
     """
-    # ── Try pycountry first ────────────────────────────────────────────────────
     try:
         results = pycountry.countries.search_fuzzy(country)
         if results:
@@ -259,7 +262,6 @@ def get_country_states(country: str) -> list:
     except Exception as e:
         print(f"pycountry states error: {e}")
 
-    # ── Fall back to AI ────────────────────────────────────────────────────────
     try:
         client = get_client()
         prompt = (
@@ -269,7 +271,7 @@ def get_country_states(country: str) -> list:
             f"No numbering, no descriptions."
         )
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "You are a geography expert. List ALL states or provinces. Return only comma-separated names."},
                 {"role": "user", "content": prompt}

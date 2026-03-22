@@ -1,9 +1,7 @@
 streamlit==1.55.0
 groq
 python-dotenv
-openai
-
 gspread
 google-auth
-
-pycountry-convert
+deep-translator
+pycountry
