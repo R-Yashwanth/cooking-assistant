@@ -144,6 +144,8 @@ if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = []
 if "suggested_dishes" not in st.session_state:
     st.session_state.suggested_dishes = []
+if "off_topic_count" not in st.session_state:
+    st.session_state.off_topic_count = 0
 
 ALL_COUNTRIES = get_all_countries()
 ALL_LANGUAGES = get_all_languages()
@@ -289,7 +291,8 @@ with st.sidebar:
     if st.button(f"➕ {T('New Chat')}", use_container_width=True):
         st.session_state.messages = []
         st.session_state.chat_history = []
-        st.session_state.suggested_dishes = []  # Reset suggestions too
+        st.session_state.suggested_dishes = []
+        st.session_state.off_topic_count = 0
         st.rerun()
 
     if st.session_state.saved_chats:
@@ -353,7 +356,8 @@ with col1:
             f"Cooking Time: {cook_time}, "
             f"Skill Level: {skill}. "
             f"IMPORTANT: Respond only in {selected_language} language. "
-            f"If relevant, focus on authentic {location_name} cuisine and cooking methods."
+            f"If relevant, focus on authentic {location_name} cuisine and cooking methods. "
+            f"OFF_TOPIC_COUNT: {st.session_state.off_topic_count}"
         )
 
         with st.spinner(T("Chef AI is thinking...")):
@@ -366,6 +370,14 @@ with col1:
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.chat_history.append({"role": "user", "content": question})
         st.session_state.chat_history.append({"role": "assistant", "content": response})
+        
+        # If response was sarcastic (off topic), increment counter
+        off_topic_keywords = ["only PM i know", "only match", "only blockbuster", 
+                             "only coding", "breaking news", "only relationship",
+                             "only history", "kitchen", "recipe instead", "ask me about food"]
+        if any(kw.lower() in response.lower() for kw in off_topic_keywords):
+            st.session_state.off_topic_count += 1
+            
         log_question(question, response, selected_language, country_name, selected_state)
         st.rerun()
 
