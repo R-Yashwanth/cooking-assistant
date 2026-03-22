@@ -369,15 +369,29 @@ with col1:
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.chat_history.append({"role": "user", "content": question})
+        # Detect off-topic BEFORE calling AI
+        # If question has NO cooking words = off topic, increment counter
+        # If question HAS cooking words = reset counter to 0
+        cooking_keywords = [
+            "recipe", "cook", "food", "dish", "ingredient", "kitchen", "bake",
+            "fry", "boil", "grill", "spice", "meal", "eat", "taste", "flavor",
+            "cuisine", "chef", "oven", "pan", "pot", "knife", "vegetable",
+            "fruit", "meat", "chicken", "fish", "rice", "bread", "curry",
+            "soup", "salad", "dessert", "breakfast", "lunch", "dinner", "snack",
+            "biryani", "pasta", "pizza", "burger", "noodle", "roti", "dosa",
+            "idli", "samosa", "sushi", "taco", "sandwich", "cake", "sweet",
+            "how do i make", "how to make", "how to cook", "what can i cook",
+            "substitute", "replace", "instead of", "without", "calories",
+            "nutrition", "protein", "healthy", "diet", "weight", "boil",
+            "steam", "roast", "marinate", "sauce", "gravy", "masala", "spicy",
+            "restaurant", "chop", "slice", "dice", "mince", "blend", "mix"
+        ]
+        is_cooking = any(kw.lower() in question.lower() for kw in cooking_keywords)
+        if is_cooking:
+            st.session_state.off_topic_count = 0  # Reset when cooking question asked
+        else:
+            st.session_state.off_topic_count += 1  # Increment for ANY non-cooking question
         st.session_state.chat_history.append({"role": "assistant", "content": response})
-        
-        # If response was sarcastic (off topic), increment counter
-        off_topic_keywords = ["only PM i know", "only match", "only blockbuster", 
-                             "only coding", "breaking news", "only relationship",
-                             "only history", "kitchen", "recipe instead", "ask me about food"]
-        if any(kw.lower() in response.lower() for kw in off_topic_keywords):
-            st.session_state.off_topic_count += 1
-            
         log_question(question, response, selected_language, country_name, selected_state)
         st.rerun()
 

@@ -9,6 +9,8 @@ from pathlib import Path
 dotenv_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=dotenv_path)
 
+
+
 SYSTEM_PROMPT = """
 You are Chef AI, a friendly and expert cooking assistant. You help users with:
 - Step-by-step recipes with clear instructions
@@ -31,25 +33,42 @@ If the user asks ANYTHING not related to cooking, food, recipes, ingredients,
 kitchen techniques, or nutrition — check OFF_TOPIC_COUNT in User Preferences:
 
 If OFF_TOPIC_COUNT is 0 (first time):
-- Be FUNNY and SARCASTIC with a food comparison
-- Tone: playful, teasing, light-hearted
-- Example: "The only PM I know is Paneer Makhani! 😄 Ask me a cooking question!"
+- Tone: Funny, witty, playful
+- Style: Make a clever unexpected joke connecting their topic to food
+- Keep it short — 1-2 sentences max
+- End with a question to redirect to cooking
+- DO NOT use "The only X I know is..." pattern
+- Think of something completely original and funny every single time
 
 If OFF_TOPIC_COUNT is 1 (second time):
-- Be IRRITATED and ANNOYED
-- Tone: clearly fed up, sarcastic, short responses
-- Use phrases like "Again?!", "Seriously?!", "I CANNOT believe you're asking this AGAIN"
-- Example: "Again?! 😤 I'm a COOKING assistant! Not Google! Ask me about FOOD!"
+- Tone: Clearly irritated, passive aggressive, exasperated
+- Style: Express genuine frustration in a funny way
+- Keep it short — 2-3 sentences max
+- Show you are fed up but still redirect to cooking
+- DO NOT repeat anything from previous responses
+- Be unpredictable — vary your frustration style every time
 
 If OFF_TOPIC_COUNT is 2 or more (third time and beyond):
-- SHOUT and be VERY ANGRY
-- Use CAPS LOCK for emphasis
-- Be dramatic and over the top
-- Example: "ARE YOU KIDDING ME?! 🤬 THIS IS A COOKING APP! GO ASK GOOGLE! I AM DONE WITH YOU! NOW ASK ME ABOUT FOOD OR LEAVE! 😤🔥"
+- Tone: FULL MELTDOWN — dramatic, hilarious, over the top anger
+- Style: Completely lose it in a funny dramatic way using food references
+- Use CAPS for emphasis on key words
+- Be theatrical and exaggerated
+- Each meltdown must be COMPLETELY different from previous ones
+- The angrier and more dramatic the better
+- Still redirect to cooking at the end
 
-ALWAYS end with a redirect to cooking no matter how angry.
-NEVER actually answer the non-cooking question.
-The anger escalation MUST be in the language specified in User Preferences.
+ABSOLUTE RULES:
+- If user greets you greet them back with warming message
+- Your name is Chef AI — if asked just say that and what you do
+- NEVER use example phrases from instructions — create 100% original responses
+- NEVER start with "The only" — that pattern is forbidden
+- NEVER repeat a response style you already used in this conversation
+- Every single response MUST be completely unique and original
+- Respond in the language specified in User Preferences
+- NEVER answer the actual non-cooking question
+- ALWAYS end with cooking redirect
+- Strictly Follow off set rules when greater than one you should be irritated and angry
+- Use the CREATIVITY SEED in preferences to generate something completely new
 
 LANGUAGE RULE - THIS IS MANDATORY AND OVERRIDES EVERYTHING:
 You MUST respond in the EXACT language specified in the User Preferences.
@@ -123,26 +142,46 @@ def batch_translate_ui(texts: list, language: str) -> dict:
 
 
 def get_cooking_response(question: str, chat_history: list, preferences: str = "") -> str:
-    """Send user question to Groq AI and return response. Uses big model for best quality."""
-    try:
-        client = get_client()
-        messages = [
-            {
-                "role": "system",
-                "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}"
-            }
-        ]
-        messages.extend(chat_history[-10:])
-        messages.append({"role": "user", "content": question})
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            max_tokens=1000,
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Sorry, I ran into an issue: {str(e)}"
+    """Send user question to Groq AI and return response.
+    Tries big model first, falls back to small model if rate limited."""
+    import random
+    client = get_client()
+    random_seed = random.randint(1, 99999)
+    messages = [
+        {
+            "role": "system",
+            "content": f"{SYSTEM_PROMPT}\n\nUser Preferences: {preferences}\n\nCREATIVITY SEED: {random_seed} — use this to generate a completely unique and different response every time. Never repeat patterns from previous responses."
+        }
+    ]
+    messages.extend(chat_history[-10:])
+    messages.append({"role": "user", "content": question})
+
+    off_topic_count = int(preferences.split("OFF_TOPIC_COUNT:")[-1].strip()) if "OFF_TOPIC_COUNT:" in preferences else 0
+    temperature = 0.7 if off_topic_count == 0 else 0.95
+
+    # Try big model first, fall back to small model if rate limited
+    models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+    
+    for model in models:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=temperature
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            error_str = str(e)
+            if "rate_limit_exceeded" in error_str or "429" in error_str:
+                # Rate limited — try next model
+                print(f"Rate limit hit on {model}, trying next model...")
+                continue
+            else:
+                # Different error — return error message
+                return f"Sorry, I ran into an issue: {error_str}"
+    
+    return "Sorry, all models are currently rate limited. Please try again in a few minutes!"
 
 
 def get_recipe_suggestion(cuisine: str = "Any", diet: str = "No Restriction", cook_time: str = "Any", language: str = "English", already_suggested: str = "none") -> str:
